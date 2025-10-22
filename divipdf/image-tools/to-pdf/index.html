@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DiviPDF - Tool Name</title>
+  <link rel="stylesheet" href="../../frontend/style.css" />
+</head>
+<body>
+  <header>
+    <h1>DiviPDF</h1>
+    <p>Tool Name (Replace with actual tool)</p>
+  </header>
+  <main style="text-align:center; padding: 50px;">
+    <form id="uploadForm">
+      <input type="file" id="fileInput" required />
+      <br /><br />
+      <button type="submit">Upload & Convert</button>
+    </form>
+    <div id="message" style="margin-top: 20px; color: #00bfff;"></div>
+  </main>
+
+  <script>
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('Please select a file.');
+        return;
+      }
+      // Future: call backend API for conversion here
+      document.getElementById('message').textContent = `Uploading and converting: ${file.name}`;
+    });
+  </script>
+</body>
+</html>
