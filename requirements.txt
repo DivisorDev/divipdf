@@ -5,6 +5,5 @@ pdf2docx
 docx2pdf
 PyPDF2
 Pillow
-rembg
-fitz
 PyMuPDF
+rembg
