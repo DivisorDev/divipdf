@@ -75,16 +75,7 @@ async def compress_pdf(file: UploadFile = File(...)):
     pdf.unlink(missing_ok=True)
     return FileResponse(out, filename=f"{Path(file.filename).stem}_compressed.pdf")
 
-@app.post("/remove-watermark/")
-async def remove_watermark(file: UploadFile = File(...)):
-    pdf = UPLOADS / f"{uuid.uuid4()}.pdf"
-    out = OUTPUTS / f"{uuid.uuid4()}_clean.pdf"
-    with open(pdf, "wb") as f: f.write(await file.read())
-    doc = fitz.open(str(pdf))
-    for page in doc:
-        for annot in page.annots() or []: page.delete_annot(annot)
-    doc.save(out); doc.close(); pdf.unlink(missing_ok=True)
-    return FileResponse(out, filename=f"{Path(file.filename).stem}_clean.pdf")
+
 
 # ---------- Image Tools ----------
 @app.post("/image-to-pdf/")
