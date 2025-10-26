@@ -1,10 +1,10 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-import uuid, io, fitz, os
+import uuid, io, os
 from pathlib import Path
 from PIL import Image
-from rembg import remove
+import fitz
 from PyPDF2 import PdfReader, PdfWriter, PdfMerger
 from pdf2docx import Converter
 from docx2pdf import convert as word_to_pdf_convert
@@ -21,6 +21,10 @@ UPLOADS, OUTPUTS = BASE_PATH / "uploads", BASE_PATH / "outputs"
 UPLOADS.mkdir(exist_ok=True)
 OUTPUTS.mkdir(exist_ok=True)
 
+@app.get("/")
+def root():
+    return {"message": "DiviPDF Backend running!", "docs": "/docs"}
+
 # ---------- PDF Tools ----------
 @app.post("/pdf-to-word/")
 async def pdf_to_word(file: UploadFile = File(...)):
@@ -29,9 +33,7 @@ async def pdf_to_word(file: UploadFile = File(...)):
     pdf = UPLOADS / f"{uuid.uuid4()}.pdf"
     doc = OUTPUTS / f"{uuid.uuid4()}.docx"
     with open(pdf, "wb") as f: f.write(await file.read())
-    cv = Converter(str(pdf))
-    cv.convert(str(doc))
-    cv.close()
+    cv = Converter(str(pdf)); cv.convert(str(doc)); cv.close()
     pdf.unlink(missing_ok=True)
     return FileResponse(doc, filename=f"{Path(file.filename).stem}.docx")
 
@@ -50,8 +52,7 @@ async def word_to_pdf(file: UploadFile = File(...)):
 async def merge_pdfs(files: list[UploadFile] = File(...)):
     if len(files) < 2:
         raise HTTPException(400, "Upload at least 2 PDFs")
-    merger = PdfMerger()
-    temp = []
+    merger, temp = PdfMerger(), []
     for f in files:
         tmp = UPLOADS / f"{uuid.uuid4()}.pdf"
         with open(tmp, "wb") as out: out.write(await f.read())
@@ -73,6 +74,17 @@ async def compress_pdf(file: UploadFile = File(...)):
     with open(out, "wb") as f: writer.write(f)
     pdf.unlink(missing_ok=True)
     return FileResponse(out, filename=f"{Path(file.filename).stem}_compressed.pdf")
+
+@app.post("/remove-watermark/")
+async def remove_watermark(file: UploadFile = File(...)):
+    pdf = UPLOADS / f"{uuid.uuid4()}.pdf"
+    out = OUTPUTS / f"{uuid.uuid4()}_clean.pdf"
+    with open(pdf, "wb") as f: f.write(await file.read())
+    doc = fitz.open(str(pdf))
+    for page in doc:
+        for annot in page.annots() or []: page.delete_annot(annot)
+    doc.save(out); doc.close(); pdf.unlink(missing_ok=True)
+    return FileResponse(out, filename=f"{Path(file.filename).stem}_clean.pdf")
 
 # ---------- Image Tools ----------
 @app.post("/image-to-pdf/")
@@ -104,26 +116,3 @@ async def resize_image(file: UploadFile = File(...), width: int = 800, height: i
     out = OUTPUTS / f"{uuid.uuid4()}_resized.png"
     img.save(out, "PNG")
     return FileResponse(out, filename=f"{Path(file.filename).stem}_resized.png")
-
-@app.post("/remove-bg/")
-async def remove_bg(file: UploadFile = File(...)):
-    img = Image.open(io.BytesIO(await file.read()))
-    result = remove(img)
-    out = OUTPUTS / f"{uuid.uuid4()}_nobg.png"
-    result.save(out)
-    return FileResponse(out, filename=f"{Path(file.filename).stem}_nobg.png")
-
-@app.post("/remove-watermark/")
-async def remove_watermark(file: UploadFile = File(...)):
-    pdf = UPLOADS / f"{uuid.uuid4()}.pdf"
-    out = OUTPUTS / f"{uuid.uuid4()}_clean.pdf"
-    with open(pdf, "wb") as f: f.write(await file.read())
-    doc = fitz.open(str(pdf))
-    for page in doc:
-        for annot in page.annots() or []: page.delete_annot(annot)
-    doc.save(out); doc.close(); pdf.unlink(missing_ok=True)
-    return FileResponse(out, filename=f"{Path(file.filename).stem}_clean.pdf")
-
-@app.get("/")
-def root():
-    return {"message": "DiviPDF Backend running!", "docs": "/docs"}
