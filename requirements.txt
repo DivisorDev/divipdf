@@ -6,4 +6,3 @@ docx2pdf
 PyPDF2
 Pillow
 PyMuPDF
-rembg
