@@ -1,37 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DiviPDF - Tool Name</title>
-  <link rel="stylesheet" href="../../frontend/style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF to Word Converter - DiviPDF Studio</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f4f4;
+  padding: 40px;
+  text-align: center;
+}
+
+h1 { color: #333; }
+
+form {
+  background: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  display: inline-block;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+input[type="file"], button {
+  margin-top: 15px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.success, .error, .processing {
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.success { background: #d4edda; color: #155724; }
+.error { background: #f8d7da; color: #721c24; }
+.processing { background: #fff3cd; color: #856404; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>DiviPDF</h1>
-    <p>Tool Name (Replace with actual tool)</p>
-  </header>
-  <main style="text-align:center; padding: 50px;">
-    <form id="uploadForm">
-      <input type="file" id="fileInput" required />
-      <br /><br />
-      <button type="submit">Upload & Convert</button>
-    </form>
-    <div id="message" style="margin-top: 20px; color: #00bfff;"></div>
-  </main>
 
-  <script>
-    document.getElementById('uploadForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const fileInput = document.getElementById('fileInput');
-      const file = fileInput.files[0];
-      if (!file) {
-        alert('Please select a file.');
-        return;
-      }
-      // Future: call backend API for conversion here
-      document.getElementById('message').textContent = `Uploading and converting: ${file.name}`;
+<h1>PDF to Word Converter</h1>
+<form id="uploadForm">
+  <input id="fileInput" type="file" accept=".pdf"><br>
+  <button type="submit">Convert PDF to Word</button>
+</form>
+<div id="message"></div>
+
+<script>
+const API_BASE_URL = 'https://divipdf-2.onrender.com';
+
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const fileInput = document.getElementById('fileInput');
+  const messageDiv = document.getElementById('message');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    messageDiv.innerHTML = '<div class="error">Please select a PDF file</div>';
+    return;
+  }
+
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    messageDiv.innerHTML = '<div class="error">Upload a valid PDF</div>';
+    return;
+  }
+
+  messageDiv.innerHTML = '<div class="processing">Converting PDF to Word...</div>';
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/pdf-to-word/`, {
+      method: 'POST',
+      body: formData
     });
-  </script>
+    if (res.ok) {
+      const blob = await res.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = file.name.replace('.pdf', '.docx');
+      link.click();
+      messageDiv.innerHTML = '<div class="success">File converted successfully!</div>';
+    } else {
+      const error = await res.json();
+      messageDiv.innerHTML = `<div class="error">Error: ${error.detail || 'Failed'}</div>`;
+    }
+  } catch (err) {
+    messageDiv.innerHTML = `<div class="error">Network error: ${err.message}</div>`;
+  }
+});
+</script>
 </body>
 </html>
